@@ -1,6 +1,7 @@
 .vscode/*
 
 !.vscode/c_cpp_properties.json
+!.vscode/cmake-kits.json
 
 build/*
 

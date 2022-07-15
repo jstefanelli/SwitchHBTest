@@ -1,3 +1,5 @@
+#include "fix_vscode.h"
+
 // Include the most common headers from the C standard library
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +9,7 @@
 
 // Include the main libnx system header, for Switch development
 #include <switch.h>
+
 
 #include <EGL/egl.h> // EGL Library
 #include <EGL/eglext.h> // EGL extensions

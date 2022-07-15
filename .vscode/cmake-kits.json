@@ -1,0 +1,6 @@
+[
+    {
+        "name": "DevkitproA64-Switch",
+        "toolchainFile": "${env:DEVKITPRO}/cmake/Switch.cmake"
+    }
+]

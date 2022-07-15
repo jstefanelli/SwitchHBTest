@@ -11,7 +11,8 @@
             "defines": [
                 "SWITCH",
                 "__SWITCH__",
-                "DEBUG"
+                "DEBUG",
+                "__VSCODE_FIX__"
             ],
             "intelliSenseMode": "linux-gcc-arm64",
             "compilerPath": "${env:DEVKITPRO}/devkitA64/bin/aarch64-none-elf-g++",
