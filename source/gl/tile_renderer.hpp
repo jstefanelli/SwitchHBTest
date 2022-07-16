@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <memory>
 #include "gl_buffer.hpp"
+#include "gl_texture.hpp"
 
 namespace gl {
 
@@ -15,6 +16,8 @@ namespace gl {
 		GLint aPosLoc, aUvLoc;
 		GLint uMvpLoc;
 		GLint uColorLoc;
+		GLint uTextureLoc;
+		GLint uTextureEnabledLoc;
 	public:
 		TileShader();
 		TileShader(const TileShader&) = delete;
@@ -23,7 +26,7 @@ namespace gl {
 
 		bool Load();
 
-		void Draw(Buffer<GL_ARRAY_BUFFER>& pos, Buffer<GL_ARRAY_BUFFER>& uv, Buffer<GL_ELEMENT_ARRAY_BUFFER>& indices, glm::vec4 color, glm::mat4 mvp, GLint amount);
+		void Draw(Buffer<GL_ARRAY_BUFFER>& pos, Buffer<GL_ARRAY_BUFFER>& uv, Buffer<GL_ELEMENT_ARRAY_BUFFER>& indices, std::shared_ptr<Texture> texture,  glm::vec4 color, glm::mat4 mvp, GLint amount);
 
 		~TileShader();
 	};
@@ -41,6 +44,7 @@ namespace gl {
 		glm::vec3 position;
 		glm::vec2 size;
 		glm::vec4 color;
+		std::shared_ptr<Texture> texture;
 
 		Tile();
 		void Draw(TileData& data, TileShader& shader, glm::mat4 vp);
@@ -56,6 +60,6 @@ namespace gl {
 		TileRenderer();
 		Tile* Get(unsigned int x, unsigned int y);
 
-		void Draw(glm::ivec2 screen_size);
+		void Draw(glm::ivec2 screen_size, int gap = 0);
 	};
 }

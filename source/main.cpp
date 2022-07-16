@@ -298,7 +298,7 @@ int main(int argc, char* argv[])
 				}
 			}
 
-			render->Draw(glm::ivec2(width, height));
+			render->Draw(glm::ivec2(width, height), 10);
 
 			eglSwapBuffers(egl_display, egl_surface);
 		}

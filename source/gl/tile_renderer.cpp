@@ -21,7 +21,7 @@ namespace gl {
 		if (info_log_size > 0) {
 			std::vector<char> data(0, info_log_size);
 			glGetShaderInfoLog(vsId, data.size(), nullptr, &data[0]);
-			std::cout << "VS Shader info log: " << std::endl << std::string(data.begin(), data.end()) << std::endl;
+			std::cout << "[GL] VS Shader info log: " << std::endl << std::string(data.begin(), data.end()) << std::endl;
 		}
 
 		GLint shader_compile_status = GL_FALSE;
@@ -40,7 +40,7 @@ namespace gl {
 		if (info_log_size > 0) {
 			std::vector<char> data(0, info_log_size);
 			glGetShaderInfoLog(fsId, data.size(), nullptr, &data[0]);
-			std::cout << "FS Shader info log: " << std::endl << std::string(data.begin(), data.end()) << std::endl;
+			std::cout << "[GL] FS Shader info log: " << std::endl << std::string(data.begin(), data.end()) << std::endl;
 		}
 
 		glGetShaderiv(fsId, GL_COMPILE_STATUS, &shader_compile_status);
@@ -58,7 +58,7 @@ namespace gl {
 		if (info_log_size > 0) {
 			std::vector<char> data(0, info_log_size);
 			glGetProgramInfoLog(id, data.size(), nullptr, &data[0]);
-			std::cout << "Program info log: " << std::endl << std::string(data.begin(), data.end()) << std::endl;
+			std::cout << "[GL] Program info log: " << std::endl << std::string(data.begin(), data.end()) << std::endl;
 		}
 
 		glGetProgramiv(id, GL_LINK_STATUS, &shader_compile_status);
@@ -85,16 +85,19 @@ namespace gl {
 
 			uMvpLoc = glGetUniformLocation(id, "uMvp");
 			uColorLoc = glGetUniformLocation(id, "uColor");
+			uTextureLoc = glGetUniformLocation(id, "uTexture");
+			uTextureEnabledLoc = glGetUniformLocation(id, "uTextureEnabled");
 
-			std::cout << "Locs: " << aPosLoc << " " << aUvLoc << " " << uMvpLoc << " " << uColorLoc << std::endl;
+
+			std::cout << "[GL] Shader Locs: " << aPosLoc << " " << aUvLoc << " / " << uMvpLoc << " " << uColorLoc << " " << uTextureLoc << " " << uTextureEnabledLoc << std::endl;
 
 			return true;
 		}
-		std::cout << "Shader compilation failed. " << std::endl;
+		std::cout << "[GL] Shader compilation failed. " << std::endl;
 		return false;
 	}
 
-	void TileShader::Draw(Buffer<GL_ARRAY_BUFFER>& pos, Buffer<GL_ARRAY_BUFFER>& uv, Buffer<GL_ELEMENT_ARRAY_BUFFER>& indices, glm::vec4 color, glm::mat4 mvp, GLint amount) {
+	void TileShader::Draw(Buffer<GL_ARRAY_BUFFER>& pos, Buffer<GL_ARRAY_BUFFER>& uv, Buffer<GL_ELEMENT_ARRAY_BUFFER>& indices, std::shared_ptr<Texture> texture, glm::vec4 color, glm::mat4 mvp, GLint amount) {
 		if (id == 0) {
 			return;
 		}
@@ -109,8 +112,17 @@ namespace gl {
 		glUniformMatrix4fv(uMvpLoc, 1, GL_FALSE, glm::value_ptr(mvp));
 		glUniform4f(uColorLoc, color.r, color.g, color.b, color.a);
 
+		if (texture != nullptr && texture->Id() > 0) {
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, texture->Id());
+			glUniform1i(uTextureLoc, 0);
+			glUniform1i(uTextureEnabledLoc, 1);
+		} else {
+			glUniform1i(uTextureEnabledLoc, 0);
+		}
+
 		if (!pos.Bind()) {
-			std::cout << "Failed to bind position " << std::endl;
+			std::cout << "[GL] Failed to bind position " << std::endl;
 			return;
 		}
 
@@ -120,7 +132,7 @@ namespace gl {
 		if (aUvLoc >= 0) {
 			if (!uv.Bind()) {
 				glDisableVertexAttribArray(aPosLoc);
-				std::cout << "Failed to bind uv " << std::endl;
+				std::cout << "[GL] Failed to bind uv " << std::endl;
 				return;
 			}
 
@@ -129,7 +141,7 @@ namespace gl {
 		}
 
 		if (!indices.Bind()) {
-			std::cout << "Failed to bind indices " << std::endl;
+			std::cout << "[GL] Failed to bind indices " << std::endl;
 			glDisableVertexAttribArray(aUvLoc);
 			glDisableVertexAttribArray(aPosLoc);
 			return;
@@ -145,7 +157,7 @@ namespace gl {
 
 	TileShader::~TileShader() {
 		if (id != 0) {
-			std::cout << "Shader: deleting shader " << id << std::endl;
+			std::cout << "[GL] Shader: deleting shader " << id << std::endl;
 			glDeleteProgram(id);
 			id = 0;
 		}
@@ -156,7 +168,7 @@ namespace gl {
 		}
 	}
 
-	Tile::Tile() : position(0, 0, 0), size(10, 10), color(0, 1, 0, 1) {
+	Tile::Tile() : position(0, 0, 0), size(10, 10), color(0, 1, 0, 1), texture(nullptr) {
 
 	}
 
@@ -165,9 +177,7 @@ namespace gl {
 		model = glm::scale(model, glm::vec3(size.x, size.y, 1.0));
 		glm::mat4 mvp = vp * model;
 
-		//std::cout << "Test: " << glm::to_string(mvp * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f) ) << std::endl;
-
-		shader.Draw(data.pos, data.uv, data.indices, color, mvp, data.amount);
+		shader.Draw(data.pos, data.uv, data.indices, texture, color, mvp, data.amount);
 	}
 
 	TileRenderer::TileRenderer() {
@@ -201,16 +211,20 @@ namespace gl {
 		return &tiles[y][x];
 	}
 
-	void TileRenderer::Draw(glm::ivec2 screenSize) {
-		//std::cout << "Screen Size: " << glm::to_string(screenSize) << std::endl;
+	void TileRenderer::Draw(glm::ivec2 screenSize, int gap) {
 		glm::mat4 vp = glm::ortho(-screenSize.x / 2.0f, screenSize.x / 2.0f, -screenSize.y / 2.0f, screenSize.y / 2.0f, 0.1f, 100.0f);
+
+		glm::ivec2 availableSpace = (screenSize - (gap * 4)) / 3;
+		glm::ivec2 cellSize = glm::ivec2(glm::min(availableSpace.x, availableSpace.y));
+
 		for(int x = 0; x < 3; x++) {
 			for(int y = 0; y < 3; y++) {
-				tiles[y][x].size = screenSize / 3;
-				tiles[y][x].position.x = (screenSize.x / 3 * x) - screenSize.x / 3;
-				tiles[y][x].position.y = (screenSize.y / 3 * y) - screenSize.y / 3;
-				tiles[y][x].position.z = -2;
-				//std::cout << "Position: " << glm::to_string(tiles[y][x].position) << std::endl;
+				tiles[y][x].size = cellSize;
+				glm::vec3 offset;
+				offset.x = (cellSize.x + gap) * (x - 1);
+				offset.y = (cellSize.y + gap) * (y - 1);
+				offset.z = -1;
+				tiles[y][x].position = offset;
 
 				tiles[y][x].Draw(*data, *shader, vp);
 			}

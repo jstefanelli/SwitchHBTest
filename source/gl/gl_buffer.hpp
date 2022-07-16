@@ -25,7 +25,7 @@ namespace gl {
 			glGenBuffers(1, &id);
 			glBindBuffer(slot, id);
 			size = sizeof(T) * data.size();
-			std::cout << "Buffer: Generating buffer: " << id << " with size " << size << std::endl;
+			std::cout << "[GL] Buffer: Generating buffer: " << id << " with size " << size << std::endl;
 			glBufferData(slot, size, &data[0], usage_hint);
 			
 			return true;
@@ -65,7 +65,7 @@ namespace gl {
 
 		~Buffer() {
 			if (id != 0) {
-				std::cout << "Buffer: deleting buffer " << id << std::endl;
+				std::cout << "[GL] Buffer: deleting buffer " << id << std::endl;
 				glDeleteBuffers(1, &id);
 			}
 		}
