@@ -15,6 +15,16 @@
 #include <EGL/eglext.h> // EGL extensions
 #include <glad/glad.h> // OpenGL loader
 
+#include "ttt/solver.hpp"
+#include "gl/tile_renderer.hpp"
+#include <cmath>
+
+constexpr glm::vec4 selectionColor(1.0f, 1.0f, 0.0f, 1.0f);
+constexpr glm::vec4 crossColor(1.0f, 0.0f, 0.0f, 1.0f);
+constexpr glm::vec4 circleColor(0.0f, 0.0f, 1.0f, 1.0f);
+constexpr glm::vec4 emptyColor(0.5f, 0.5f, 0.5f, 1.0f);
+constexpr glm::vec4 errorColor(0.0f, 0.0f, 0.0f, 1.0f);
+
 EGLDisplay egl_display;
 EGLContext egl_context;
 EGLSurface egl_surface;
@@ -157,10 +167,29 @@ int main(int argc, char* argv[])
 
 		auto last_frame = std::chrono::high_resolution_clock::now();
 
-		float r = 0.0f;
-		bool dir = true;
-		float speed = 0.5f;
 		// Main loop
+
+		u32 width;
+		u32 height;
+		nwindowGetDimensions(nwindowGetDefault(), &width, &height);
+
+		glViewport(0, 0, width, height);
+		glClearColor(0.15f, 0.15f, 0.15f, 1.0f);
+		float totalTime = 0;
+		float waitStart = 0;
+		bool waiting = false;
+		int aiTurn = 0;
+
+		ttt::Coord selectedCoord{ 1, 1 };
+		ttt::Board board;
+
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		std::shared_ptr<gl::TileRenderer> render = std::make_shared<gl::TileRenderer>();
 		while (appletMainLoop())
 		{
 
@@ -179,26 +208,102 @@ int main(int argc, char* argv[])
 			auto now = std::chrono::high_resolution_clock::now();
 			auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_frame).count() / 1000.0f;
 			last_frame = now;
+			totalTime += delta;
+			
+			float selectionOverlayAmount = glm::abs(glm::sin(totalTime * 3));
 
-			if (dir) {
-				r += delta * speed;
-				if (r >= 1.0f) {
-					r = 1.0f;
-					dir = false;
+			int xMov = 0;
+			int yMov = 0;
+			bool applyClick = false;
+			
+			if (!waiting) {
+				if (kDown & HidNpadButton_AnyRight) {
+					xMov++;
+				}
+
+				if (kDown & HidNpadButton_AnyLeft) {
+					xMov--;
+				}
+
+				if (kDown & HidNpadButton_AnyUp) {
+					yMov++;
+				}
+
+				if (kDown & HidNpadButton_AnyDown) {
+					yMov--;
+				}
+
+				if (kDown & HidNpadButton_A) {
+					applyClick = true;
+				}
+
+				selectedCoord.x += xMov;
+				selectedCoord.y += yMov;
+				selectedCoord.Normalize();
+
+
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+				if (applyClick) {
+					if(board.Set(selectedCoord, ttt::TileState::Circle)) {
+						if (board.GetState() != ttt::BoardState::Regular) {
+							waitStart = totalTime;
+							waiting = true;
+						}
+
+						ttt::NextMove(board, aiTurn++);
+
+						if (board.GetState() != ttt::BoardState::Regular) {
+							waitStart = totalTime;
+							waiting = true;
+						}
+					}
 				}
 			} else {
-				r -= delta * speed;
-				if (r <= 0.0f) {
-					r = 0.0f;
-					dir = true;
+				if (totalTime - waitStart > 5) {
+					board.Reset();
+					waiting = false;
+					aiTurn = 0;
 				}
 			}
 
-			glClearColor(r, 0.0f, 0.0f, 1.0f);
-			glClear(GL_COLOR_BUFFER_BIT);
+			for(unsigned int x = 0; x < 3; x++) {
+				for(unsigned int y = 0; y < 3; y++) {
+					gl::Tile* t = render->Get(x, y);
+					ttt::TileState state = board.Get(x, y);
+					if (t == nullptr)
+						continue;
+
+					glm::vec4 baseColor = emptyColor;
+					switch(state) {
+					case ttt::TileState::Circle:
+						baseColor = circleColor;
+						break;
+					case ttt::TileState::Cross:
+						baseColor = crossColor;
+						break;
+					case ttt::TileState::Empty:
+						baseColor = emptyColor;
+						break;
+					case ttt::TileState::Invalid:
+						baseColor = errorColor;
+						break;
+					}
+
+					if (selectedCoord.x == x && selectedCoord.y == y) {
+						baseColor = glm::mix(baseColor, selectionColor, selectionOverlayAmount);
+					}
+
+					t->color = baseColor;
+				}
+			}
+
+			render->Draw(glm::ivec2(width, height));
 
 			eglSwapBuffers(egl_display, egl_surface);
 		}
+
+		render = nullptr;
 
 		CleanupEGL();
 	}
