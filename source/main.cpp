@@ -18,11 +18,14 @@
 #include "ttt/solver.hpp"
 #include "gl/tile_renderer.hpp"
 #include <cmath>
+#include "Base_png.h"
+#include "Cross_png.h"
+#include "Circle_png.h"
 
 constexpr glm::vec4 selectionColor(1.0f, 1.0f, 0.0f, 1.0f);
 constexpr glm::vec4 crossColor(1.0f, 0.0f, 0.0f, 1.0f);
 constexpr glm::vec4 circleColor(0.0f, 0.0f, 1.0f, 1.0f);
-constexpr glm::vec4 emptyColor(0.5f, 0.5f, 0.5f, 1.0f);
+constexpr glm::vec4 emptyColor(1.0f, 1.0f, 1.0f, 1.0f);
 constexpr glm::vec4 errorColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 EGLDisplay egl_display;
@@ -190,6 +193,12 @@ int main(int argc, char* argv[])
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		std::shared_ptr<gl::TileRenderer> render = std::make_shared<gl::TileRenderer>();
+		std::shared_ptr<gl::Texture> cross_texture = std::make_shared<gl::Texture>();
+		cross_texture->LoadPNG(Cross_png, Cross_png_size);
+		std::shared_ptr<gl::Texture> circle_texture = std::make_shared<gl::Texture>();
+		circle_texture->LoadPNG(Circle_png, Circle_png_size);
+		std::shared_ptr<gl::Texture> empty_texture = std::make_shared<gl::Texture>();
+		empty_texture->LoadPNG(Base_png, Base_png_size);
 		while (appletMainLoop())
 		{
 
@@ -215,6 +224,7 @@ int main(int argc, char* argv[])
 			int xMov = 0;
 			int yMov = 0;
 			bool applyClick = false;
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			
 			if (!waiting) {
 				if (kDown & HidNpadButton_AnyRight) {
@@ -240,9 +250,6 @@ int main(int argc, char* argv[])
 				selectedCoord.x += xMov;
 				selectedCoord.y += yMov;
 				selectedCoord.Normalize();
-
-
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 				if (applyClick) {
 					if(board.Set(selectedCoord, ttt::TileState::Circle)) {
@@ -278,15 +285,19 @@ int main(int argc, char* argv[])
 					switch(state) {
 					case ttt::TileState::Circle:
 						baseColor = circleColor;
+						t->texture = circle_texture;
 						break;
 					case ttt::TileState::Cross:
 						baseColor = crossColor;
+						t->texture = cross_texture;
 						break;
 					case ttt::TileState::Empty:
 						baseColor = emptyColor;
+						t->texture = empty_texture;
 						break;
 					case ttt::TileState::Invalid:
 						baseColor = errorColor;
+						t->texture = empty_texture;
 						break;
 					}
 
@@ -303,6 +314,9 @@ int main(int argc, char* argv[])
 			eglSwapBuffers(egl_display, egl_surface);
 		}
 
+		circle_texture = nullptr;
+		cross_texture = nullptr;
+		empty_texture = nullptr;
 		render = nullptr;
 
 		CleanupEGL();

@@ -154,13 +154,13 @@ namespace gl {
 			&colorType,
 			NULL, NULL, NULL);
 
-		if (retval != -1) {
+		if (retval != 1) {
 			std::cerr << "Failed to read PNG info." << std::endl;
 			png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 			return false;
 		}
 
-		if (bitDepth != 8 || bitDepth != 16) {
+		if (bitDepth != 8 && bitDepth != 16) {
 			std::cerr << "Unsupported PNG bit depth:" << bitDepth << std::endl;
 			png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 			return false;
