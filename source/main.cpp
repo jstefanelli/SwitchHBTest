@@ -97,6 +97,79 @@ int InitEGL(NWindow* win) {
 	return 1;
 }
 
+void glDebugCB(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
+	std::string src = "[SRC_UNKNOWN]";
+	switch(source) {
+		case GL_DEBUG_SOURCE_API:
+			src = "[SRC_API]";
+			break;
+		case GL_DEBUG_SOURCE_APPLICATION:
+			src = "[SRC_APP]";
+			break;
+		case GL_DEBUG_SOURCE_OTHER:
+			src = "[SRC_OTHER]";
+			break;
+		case GL_DEBUG_SOURCE_SHADER_COMPILER:
+			src = "[SRC_SHADER]";
+			break;
+		case GL_DEBUG_SOURCE_THIRD_PARTY:
+			src = "[SRC_3RD]";
+			break;
+		case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+			src = "[SRC_WINDOW]";
+			break;
+	}
+
+	std::string tp = "[TYPE_UNKNOWN]";
+	switch(type) {
+		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+			tp = "[TYPE_DEPRECATED";
+			break;
+		case GL_DEBUG_TYPE_ERROR:
+			tp = "[TYPE_ERROR]";
+			break;
+		case GL_DEBUG_TYPE_MARKER:
+			tp = "[TYPE_MARKER]";
+			break;
+		case GL_DEBUG_TYPE_OTHER:
+			tp = "[TYPE_OTHER]";
+			break;
+		case GL_DEBUG_TYPE_PERFORMANCE:
+			tp = "[TYPE_PERF]";
+			break;
+		case GL_DEBUG_TYPE_POP_GROUP:
+			tp = "[TYPE_POP]";
+			break;
+		case GL_DEBUG_TYPE_PORTABILITY:
+			tp = "[TYPE_PORT]";
+			break;
+		case GL_DEBUG_TYPE_PUSH_GROUP:
+			tp = "[TYPE_PUSH]";
+			break;
+		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+			tp = "[TYPE_UB]";
+			break;
+	}
+
+	std::string sev = "[SEV_UNKNOWN]";
+	switch(severity) {
+		case GL_DEBUG_SEVERITY_HIGH:
+			sev = "[SEV_HIGH]";
+			break;
+		case GL_DEBUG_SEVERITY_LOW:
+			sev = "[SEV_LOW]";
+			break;
+		case GL_DEBUG_SEVERITY_MEDIUM:
+			sev = "[SEV_MEDIUM]";
+			break;
+		case GL_DEBUG_SEVERITY_NOTIFICATION:
+			sev = "[SEV_NOTIF]";
+			break;
+	}
+
+	std::cout << "[GLD]" << sev << tp << src << ": " << std::string(message, length) << std::endl;
+}
+
 void CleanupEGL() {
 	if (egl_display) {
 		eglMakeCurrent(egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
@@ -168,6 +241,11 @@ int main(int argc, char* argv[])
 
 		gladLoadGL();
 
+#ifdef DEBUG
+		glEnable(GL_DEBUG_OUTPUT);
+		glDebugMessageCallback(glDebugCB, nullptr);
+#endif
+
 		auto last_frame = std::chrono::high_resolution_clock::now();
 
 		// Main loop
@@ -185,6 +263,7 @@ int main(int argc, char* argv[])
 
 		ttt::Coord selectedCoord{ 1, 1 };
 		ttt::Board board;
+
 
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
